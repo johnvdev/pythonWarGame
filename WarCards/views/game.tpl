@@ -8,16 +8,22 @@
 <div class="row">
     <div class="col-md-6">
         <h3>Your card</h3>
-        <img src="/static/deck/{{userCard[0]}}/{{userCard[1]}}.png">
+        <h5>Your Score: {{userScore}}</h5>
+        %for c in userCards:
+            <img src="/static/deck/{{c[0]}}/{{c[1]}}.png">
+        %end
     </div>
     <div class="col-md-6">
         <h3>Robo card</h3>
-        <img src="/static/deck/{{roboCard[0]}}/{{roboCard[1]}}.png">
+        <h5>Robo Score: {{roboScore}}</h5>
+        %for c in roboCards:
+            <img src="/static/deck/{{c[0]}}/{{c[1]}}.png">
+        %end
     </div>
 </div>
 <div class="row">
     <div class="col-md-4">
-        <a href="/game/{{userCard}}/{{roboCard}}/{{code}}">Play Next Hand</a>
+        <a href="/game/{{userCards}}/{{roboCards}}/{{code}}">Play Next Hand</a>
     </div>
 </div>
 

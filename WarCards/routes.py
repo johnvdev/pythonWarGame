@@ -41,6 +41,9 @@ def home():
 @view('game')
 def newGame():
 
+    uWarDeck = []
+    rWarDeck = []
+
     userName = request.query.get('txtName')
 
     suits = coll.distinct("Suits")
@@ -51,7 +54,7 @@ def newGame():
     while len(randDeck) < 52: #off the top of my head.. SHUFFLE!!!!!!
             randRank = random.randint(0,len(rank) -1)
             randSuit = random.randint(0,len(suits) -1)
-            card = [suits[randSuit],rank[randRank], randRank +1] #create random card
+            card = [suits[randSuit],rank[randRank]] #create random card
             if len(randDeck) == 0:#first card so we just add it
                 randDeck.append(card)
             else:
@@ -71,13 +74,16 @@ def newGame():
 
     games.insert_one({ "gameCode": gameCode, "userName": userName, "roboDeck": RoboDeck, "userDeck":UserDeck })
 
+    uWarDeck.append(UserDeck[0])
+    rWarDeck.append(RoboDeck[0])
+
     return dict(
         userScore = 0,
         roboScore = 0,
         user =userName,
         code = gameCode,
-        userCard = UserDeck[0],
-        roboCard = RoboDeck[0],
+        userCards = uWarDeck,
+        roboCards = uWarDeck,
         year=datetime.now().year
     )
 
@@ -85,43 +91,57 @@ def newGame():
 @view('game')
 def playGame(ucard, robocard, gCode): 
 
+    uWarDeck = []
+    rWarDeck = []
+
+    #parse returned cards back into list objects
     rCard = ast.literal_eval(robocard)
     uCard = ast.literal_eval(ucard)
 
-    rCardVal = rCard[2]
-    uCardVal = uCard[2]
+    #get card values
+    rVal = CardValue(rCard)
+    uVal = CardValue(uCard)
 
-    UserDeck = games.distinct("userDeck",{"gameCode":gCode})
-    userDeckLen = len(list(UserDeck))
+    #get decks from database, get counts 
+    UserDeck = list(games.find({"gameCode":gCode},{"userDeck":1,"_id":0}))[0]['userDeck']
+    userDeckLen = len(UserDeck)
 
-    RoboDeck = games.distinct("roboDeck",{"gameCode":gCode})
-    roboDeckLen = len(list(RoboDeck))
+    RoboDeck = list(games.find({"gameCode":gCode},{"roboDeck":1,"_id":0}))[0]['roboDeck']
+    roboDeckLen = len(RoboDeck)
 
-    if uCardVal > rCardVal:
-         games.update({"gameCode":gCode }, { "$pop": { "roboDeck": -1 } } )
-         games.update({"gameCode":gCode }, { "$pop": { "userDeck": -1 } } )
-
-    elif uCardVal < rCardVal:
-          games.update({"gameCode":gCode }, { "$pop": { "roboDeck": -1 } } )
-          games.update({"gameCode":gCode }, { "$pop": { "userDeck": -1 } } )
+    #remove played cards from both decks
+    games.update({"gameCode":gCode }, { "$pop": { "roboDeck": -1 } } )
+    games.update({"gameCode":gCode }, { "$pop": { "userDeck": -1 } } )
 
 
-    UserDeck = games.distinct("userDeck",{"gameCode":gCode})
-    userDeckLen = len(list(UserDeck))
+    #whoever wins round gets both cards, if both cards equal a war begins
+    if uVal > rVal:
+        games.update({"gameCode":gCode },{"$push":{"userDeck":{"$each":[rCard, uCard]}}})
 
-    RoboDeck = games.distinct("roboDeck",{"gameCode":gCode})
-    roboDeckLen = len(list(RoboDeck))
+    elif uVal < rVal:
+        games.update({"gameCode":gCode },{"$push":{"roboDeck":{"$each":[uCard, rCard]}}})
+    else:
+        for x in range(5):
+            uWarDeck.append(UserDeck[0])
+            games.update({"gameCode":gCode }, { "$pop": { "roboDeck": -1 } } )
+            rWarDeck.append(RoboDeck[0])
+            games.update({"gameCode":gCode }, { "$pop": { "userDeck": -1 } } )
+        
+            
+            
+
+         
 
     userName = games.distinct("userName",{"gameCode":gCode})[0]
 
 
     return dict(
-        userScore = 0,
-        roboScore = 0,
+        userScore = userDeckLen,
+        roboScore = roboDeckLen,
         user =userName,
         code = gCode,
-        userCard = UserDeck[0],
-        roboCard = RoboDeck[0],
+        userCards = uWarDeck,
+        roboCards = rWarDeck,
         year=datetime.now().year
     )
 
@@ -139,3 +159,12 @@ def split(arr, size):
          arr   = arr[size:]
      arrs.append(arr)
      return arrs
+
+def CardValue(card):
+    c = card[1]
+    if c == "K" or c == "J" or c =="Q":
+        return 10
+    elif c == "A":
+        return 11
+    else:
+        return int(c)

@@ -10,6 +10,11 @@ import random
 import uuid
 from bottle import static_file
 import os
+import ast
+import dis
+import test
+
+dis.dis(test)
 
 @route('/')
 @route('/home')
@@ -46,7 +51,7 @@ def newGame():
     while len(randDeck) < 52: #off the top of my head.. SHUFFLE!!!!!!
             randRank = random.randint(0,len(rank) -1)
             randSuit = random.randint(0,len(suits) -1)
-            card = [suits[randSuit],rank[randRank]] #create random card
+            card = [suits[randSuit],rank[randRank], randRank +1] #create random card
             if len(randDeck) == 0:#first card so we just add it
                 randDeck.append(card)
             else:
@@ -67,10 +72,12 @@ def newGame():
     games.insert_one({ "gameCode": gameCode, "userName": userName, "roboDeck": RoboDeck, "userDeck":UserDeck })
 
     return dict(
+        userScore = 0,
+        roboScore = 0,
         user =userName,
         code = gameCode,
-        userCard = UserDeck,
-        roboCard = RoboDeck,
+        userCard = UserDeck[0],
+        roboCard = RoboDeck[0],
         year=datetime.now().year
     )
 
@@ -78,18 +85,43 @@ def newGame():
 @view('game')
 def playGame(ucard, robocard, gCode): 
 
-    if ucard[0][1] > robocard[0][1]:
-         games.update({"code":gCode },{ "$pull": { "roboDeck": { "$in": robocard[0]}}},{ "multi": "false" })
-         games.update({"code":gCode},{"$push":robocard[0]})
+    rCard = ast.literal_eval(robocard)
+    uCard = ast.literal_eval(ucard)
+
+    rCardVal = rCard[2]
+    uCardVal = uCard[2]
+
+    UserDeck = games.distinct("userDeck",{"gameCode":gCode})
+    userDeckLen = len(list(UserDeck))
+
+    RoboDeck = games.distinct("roboDeck",{"gameCode":gCode})
+    roboDeckLen = len(list(RoboDeck))
+
+    if uCardVal > rCardVal:
+         games.update({"gameCode":gCode }, { "$pop": { "roboDeck": -1 } } )
+         games.update({"gameCode":gCode }, { "$pop": { "userDeck": -1 } } )
+
+    elif uCardVal < rCardVal:
+          games.update({"gameCode":gCode }, { "$pop": { "roboDeck": -1 } } )
+          games.update({"gameCode":gCode }, { "$pop": { "userDeck": -1 } } )
+
+
+    UserDeck = games.distinct("userDeck",{"gameCode":gCode})
+    userDeckLen = len(list(UserDeck))
+
+    RoboDeck = games.distinct("roboDeck",{"gameCode":gCode})
+    roboDeckLen = len(list(RoboDeck))
+
+    userName = games.distinct("userName",{"gameCode":gCode})[0]
 
 
     return dict(
+        userScore = 0,
+        roboScore = 0,
         user =userName,
-        code = gameCode,
-        userCardFace = UserDeck[0][0],
-         userCardValue = UserDeck[0][1],
-        roboCardFace = RoboDeck[0][0],
-        roboCardValue = RoboDeck[0][1],
+        code = gCode,
+        userCard = UserDeck[0],
+        roboCard = RoboDeck[0],
         year=datetime.now().year
     )
 

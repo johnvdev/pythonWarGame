@@ -83,7 +83,7 @@ def newGame():
         user =userName,
         code = gameCode,
         userCards = uWarDeck,
-        roboCards = uWarDeck,
+        roboCards = rWarDeck,
         year=datetime.now().year
     )
 
@@ -98,35 +98,60 @@ def playGame(ucard, robocard, gCode):
     rCard = ast.literal_eval(robocard)
     uCard = ast.literal_eval(ucard)
 
-    #get card values
-    rVal = CardValue(rCard)
-    uVal = CardValue(uCard)
+    #check if incoming round is a war
+    if len(rCard) > 1:
+        #get value of last cards
+        rVal = CardValue(rCard[3])
+        uVal = CardValue(uCard[3])
 
-    #get decks from database, get counts 
+    else:
+        #get card values
+        
+        rVal = CardValue(rCard[0])
+        uVal = CardValue(uCard[0])
+
+
+    #get decks from database
+    UserDeck = list(games.find({"gameCode":gCode},{"userDeck":1,"_id":0}))[0]['userDeck']
+
+    RoboDeck = list(games.find({"gameCode":gCode},{"roboDeck":1,"_id":0}))[0]['roboDeck']
+
+    #Dont take away first two cards if a war is going to happen or if a war happens
+    if uVal != rVal and len(rCard) < 2:
+        games.update({"gameCode":gCode }, { "$pop": { "roboDeck": -1 } } )
+        games.update({"gameCode":gCode }, { "$pop": { "userDeck": -1 } } )
+   
+    #whoever wins round gets cards, if both cards equal a war begins
+    if uVal > rVal:
+        for c in uCard:
+            games.update({"gameCode":gCode },{"$push":{"userDeck":c}})
+        for c in rCard:
+            games.update({"gameCode":gCode },{"$push":{"userDeck":c}})
+        
+        uWarDeck.append(UserDeck[0])
+        rWarDeck.append(RoboDeck[0])
+
+    elif uVal < rVal:
+        for c in rCard:
+            games.update({"gameCode":gCode },{"$push":{"roboDeck":c}})
+        for c in uCard:
+            games.update({"gameCode":gCode },{"$push":{"roboDeck":c}})
+        
+        uWarDeck.append(UserDeck[0])
+        rWarDeck.append(RoboDeck[0])
+    else:
+        for x in range(4):
+            uWarDeck.append(list(games.find({"gameCode":gCode},{"userDeck":1,"_id":0}))[0]['userDeck'][0])
+            games.update({"gameCode":gCode }, { "$pop": { "userDeck": -1 } } )
+            rWarDeck.append(list(games.find({"gameCode":gCode},{"roboDeck":1,"_id":0}))[0]['roboDeck'][0])
+            games.update({"gameCode":gCode }, { "$pop": { "roboDeck": -1 } } )
+    
+            
     UserDeck = list(games.find({"gameCode":gCode},{"userDeck":1,"_id":0}))[0]['userDeck']
     userDeckLen = len(UserDeck)
 
     RoboDeck = list(games.find({"gameCode":gCode},{"roboDeck":1,"_id":0}))[0]['roboDeck']
     roboDeckLen = len(RoboDeck)
-
-    #remove played cards from both decks
-    games.update({"gameCode":gCode }, { "$pop": { "roboDeck": -1 } } )
-    games.update({"gameCode":gCode }, { "$pop": { "userDeck": -1 } } )
-
-
-    #whoever wins round gets both cards, if both cards equal a war begins
-    if uVal > rVal:
-        games.update({"gameCode":gCode },{"$push":{"userDeck":{"$each":[rCard, uCard]}}})
-
-    elif uVal < rVal:
-        games.update({"gameCode":gCode },{"$push":{"roboDeck":{"$each":[uCard, rCard]}}})
-    else:
-        for x in range(5):
-            uWarDeck.append(UserDeck[0])
-            games.update({"gameCode":gCode }, { "$pop": { "roboDeck": -1 } } )
-            rWarDeck.append(RoboDeck[0])
-            games.update({"gameCode":gCode }, { "$pop": { "userDeck": -1 } } )
-        
             
             
 

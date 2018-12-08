@@ -2,7 +2,6 @@
 <div class="row">
     <div class="col-md-12">
         <h2>User:{{user}}</h2>
-        <h3>Game Code:{{code}}</h3>
     </div>
 </div>
 <div class="row">

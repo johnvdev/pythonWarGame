@@ -125,6 +125,7 @@
     <Content Include="views\about.tpl" />
     <Content Include="views\contact.tpl" />
     <Content Include="views\game.tpl" />
+    <Content Include="views\gameOver.tpl" />
     <Content Include="views\index.tpl" />
     <Content Include="views\layout.tpl" />
   </ItemGroup>

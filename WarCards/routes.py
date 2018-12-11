@@ -87,6 +87,17 @@ def newGame():
         year=datetime.now().year
     )
 
+
+@route('/gameOver/<winner>')
+@view('gameOver')
+def gameOver(winner):
+
+    return dict(
+        year=datetime.now().year,
+        winner = winner
+        )
+
+
 @route('/game/<ucard>/<robocard>/<gCode>')
 @view('game')
 def playGame(ucard, robocard, gCode): 
@@ -116,9 +127,9 @@ def playGame(ucard, robocard, gCode):
     roboDeckLen = len(RoboDeck)
 
     if userDeckLen >= 52:
-        redirect("/userwin")
+        redirect("/gameOver/User")
     elif roboDeckLen >=52:
-        redirect("/roboWin") 
+        redirect("/gameOver/Robo") 
 
    
     #whoever wins round gets cards, if both cards equal a war begins
